@@ -85,11 +85,14 @@ async function simpleSolTransfer(
   sender: Web3.Keypair,
   receiver: Web3.Keypair
 ) {
+  const senderAddr = sender.publicKey.toBase58();
+  const receiverAddr = receiver.publicKey.toBase58();
+
   console.log(
     "Attempting to transfer 0.1 SOL from",
-    sender.publicKey.toBase58(),
+    senderAddr.slice(0, 4) + "..." + senderAddr.slice(-4),
     "to",
-    receiver.publicKey.toBase58()
+    receiverAddr.slice(0, 4) + "..." + receiverAddr.slice(-4)
   );
 
   const transaction = new Web3.Transaction();
@@ -107,7 +110,8 @@ async function simpleSolTransfer(
   );
 
   console.log(
-    `Transaction https://explorer.solana.com/tx/${transactionSignature}?cluster=devnet`
+    `Transaction https://explorer.solana.com/tx/${transactionSignature}?cluster=devnet`,
+    "\n"
   );
 }
 
@@ -117,7 +121,7 @@ async function main() {
   const receiver = await initializeReceiver(connection);
 
   console.log("Sender Public Key:", sender.publicKey.toBase58());
-  console.log("Receiver Public Key:", receiver.publicKey.toBase58());
+  console.log("Receiver Public Key:", receiver.publicKey.toBase58(), "\n");
 
   await simpleSolTransfer(connection, sender, receiver);
 }
