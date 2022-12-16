@@ -41,6 +41,8 @@ async function initializeReceiver(
       { flag: "a+" }
     );
 
+    await airdropSolIfNeeded(keypair, connection);
+
     return keypair;
   }
 
@@ -48,7 +50,34 @@ async function initializeReceiver(
   const secretKey = Uint8Array.from(secret);
   const keypairFromSecret = Web3.Keypair.fromSecretKey(secretKey);
 
+  await airdropSolIfNeeded(keypairFromSecret, connection);
+
   return keypairFromSecret;
+}
+
+async function airdropSolIfNeeded(
+  signer: Web3.Keypair,
+  connection: Web3.Connection
+) {
+  const balance = await connection.getBalance(signer.publicKey);
+  if (balance / Web3.LAMPORTS_PER_SOL < 1) {
+    console.log("Airdropping 1 SOL");
+
+    const airDropSignature = await connection.requestAirdrop(
+      signer.publicKey,
+      Web3.LAMPORTS_PER_SOL
+    );
+
+    const latestBlockhash = await connection.getLatestBlockhash();
+    await connection.confirmTransaction({
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+      signature: airDropSignature,
+    });
+
+    const newBalance = await connection.getBalance(signer.publicKey);
+    console.log("New balance is", newBalance / Web3.LAMPORTS_PER_SOL, "SOL");
+  }
 }
 
 async function main() {
