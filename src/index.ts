@@ -17,12 +17,16 @@ async function initializeSender(
       `SENDER_PRIVATE_KEY=[${keypair.secretKey.toString()}]\r\n`
     );
 
+    await airdropSolIfNeeded(keypair, connection);
+
     return keypair;
   }
 
   const secret = JSON.parse(process.env.SENDER_PRIVATE_KEY ?? "") as number[];
   const secretKey = Uint8Array.from(secret);
   const keypairFromSecret = Web3.Keypair.fromSecretKey(secretKey);
+
+  await airdropSolIfNeeded(keypairFromSecret, connection);
 
   return keypairFromSecret;
 }
@@ -41,16 +45,12 @@ async function initializeReceiver(
       { flag: "a+" }
     );
 
-    await airdropSolIfNeeded(keypair, connection);
-
     return keypair;
   }
 
   const secret = JSON.parse(process.env.RECEIVER_PRIVATE_KEY ?? "") as number[];
   const secretKey = Uint8Array.from(secret);
   const keypairFromSecret = Web3.Keypair.fromSecretKey(secretKey);
-
-  await airdropSolIfNeeded(keypairFromSecret, connection);
 
   return keypairFromSecret;
 }
@@ -80,6 +80,37 @@ async function airdropSolIfNeeded(
   }
 }
 
+async function simpleSolTransfer(
+  connection: Web3.Connection,
+  sender: Web3.Keypair,
+  receiver: Web3.Keypair
+) {
+  console.log(
+    "Attempting to transfer 0.1 SOL from",
+    sender.publicKey.toBase58(),
+    "to",
+    receiver.publicKey.toBase58()
+  );
+
+  const transaction = new Web3.Transaction();
+  const instruction = Web3.SystemProgram.transfer({
+    fromPubkey: sender.publicKey,
+    lamports: Web3.LAMPORTS_PER_SOL * 0.1,
+    toPubkey: receiver.publicKey,
+  });
+
+  transaction.add(instruction);
+  const transactionSignature = await Web3.sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [sender]
+  );
+
+  console.log(
+    `Transaction https://explorer.solana.com/tx/${transactionSignature}?cluster=devnet`
+  );
+}
+
 async function main() {
   const connection = new Web3.Connection(Web3.clusterApiUrl("devnet"));
   const sender = await initializeSender(connection);
@@ -87,6 +118,8 @@ async function main() {
 
   console.log("Sender Public Key:", sender.publicKey.toBase58());
   console.log("Receiver Public Key:", receiver.publicKey.toBase58());
+
+  await simpleSolTransfer(connection, sender, receiver);
 }
 
 main()
